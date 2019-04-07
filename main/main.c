@@ -65,15 +65,57 @@ void app_main() {
     printf("%" PRIu16 "\n", kD);
 
     TaskHandle_t pid_task_handle = NULL;
-    xTaskCreate(pid_task, "PID", 2048, on_new_euler, 5, &pid_task_handle);   
+    xTaskCreate(pid_task, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
 
     dac_output_enable(DAC_CHANNEL_2);
 
-    int count = 0;
-    while (1) {
-        count = (count + 1) % 255;
-        dac_output_voltage(DAC_CHANNEL_2, 0);
-        delay_ms(200);
-        printf("%d\n", count);
-    }
+    
+    // uint8_t output_data=0;
+    // int     read_raw;
+    // esp_err_t r;
+
+    // gpio_num_t adc_gpio_num;
+
+    // r = adc2_pad_get_io_num( 7, &adc_gpio_num );
+    // assert( r == ESP_OK );
+
+    // //be sure to do the init before using adc2. 
+    // printf("adc2_init...\n");
+    // adc2_config_channel_atten( 7, ADC_ATTEN_0db );  
+
+    // dac_output_enable(DAC_CHANNEL_2);
+
+    // gpio_config_t io_conf;
+    // io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    // io_conf.mode = GPIO_MODE_OUTPUT;
+    // io_conf.pin_bit_mask = (1ULL << 18);
+    // io_conf.pull_down_en = 0;
+    // io_conf.pull_up_en = 0;
+    // gpio_config(&io_conf);
+
+    // gpio_set_level(18, 0);
+
+    // dac_out_voltage(DAC_CHANNEL_2, 255);
+    // int count = 255;
+    // delay_ms(100);
+    // while (count > 200) {
+    //     dac_out_voltage(DAC_CHANNEL_2, count--);
+    //     if (count < 0) count = 0;
+    //     printf("%d\n", count);
+
+    //     r = adc2_get_raw( 7, ADC_WIDTH_12Bit, &read_raw);
+    //     if ( r == ESP_OK ) {
+    //         printf("%d: %d\n", output_data, read_raw );
+    //     } else if ( r == ESP_ERR_INVALID_STATE ) {
+    //         printf("%s: ADC2 not initialized yet.\n", esp_err_to_name(r));
+    //     } else if ( r == ESP_ERR_TIMEOUT ) {
+    //         //This can not happen in this example. But if WiFi is in use, such error code could be returned.
+    //         printf("%s: ADC2 is in use by Wi-Fi.\n", esp_err_to_name(r));
+    //     } else {
+    //         printf("%s\n", esp_err_to_name(r));
+    //     }
+
+    //     delay_ms(100);
+    // }
+
 }
