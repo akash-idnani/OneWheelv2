@@ -6,6 +6,6 @@
 
 #define DEFAULT_MPU_HZ  (200)
 
-void pid_task();
+void euler_reader();
 
 #endif

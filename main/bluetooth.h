@@ -17,6 +17,8 @@
 #define ADV_CONFIG_FLAG             (1 << 0)
 #define SCAN_RSP_CONFIG_FLAG        (1 << 1)
 
+#include <inttypes.h>
+
 enum {
     IDX_MAIN_SVC,
     IDX_CHAR_ANGLES,
@@ -30,5 +32,7 @@ enum {
 
 void init_ble();
 void send_euler(long* euler);
+void on_new_pid_gains(uint16_t prop, uint16_t integral, uint16_t deriv);
+void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv);
 
 #endif

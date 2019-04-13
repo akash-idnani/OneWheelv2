@@ -3,8 +3,6 @@
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
-#include "nvs.h"
 #include <inttypes.h>
 
 #include <esp_timer.h>
@@ -13,6 +11,8 @@
 #include "motiondriver_defs.h"
 #include "mpu_reader.h"
 #include "bluetooth.h"
+#include "nvs_handler.h"
+
 
 
 void delay_ms(unsigned long num_ms) {
@@ -23,25 +23,16 @@ void get_ms(unsigned long *count) {
     *count = esp_timer_get_time() / 1000;
 }
 
+void on_new_pid_gains(uint16_t prop, uint16_t integral, uint16_t deriv) {
+    printf("%" PRIu16 ", ", prop);
+    printf("%" PRIu16 ", ", integral);
+    printf("%" PRIu16 "\n", deriv);
 
-void reset_nvs() {
-    nvs_handle nvs_h;
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvs_h));
-    ESP_ERROR_CHECK(nvs_set_u16(nvs_h, "Kp", 10));
-    ESP_ERROR_CHECK(nvs_set_u16(nvs_h, "Ki", 11));
-    ESP_ERROR_CHECK(nvs_set_u16(nvs_h, "Kd", 12));
-
-    ESP_ERROR_CHECK(nvs_commit(nvs_h));
-    nvs_close(nvs_h);
+    set_nvs(prop, integral, deriv);
 }
 
-void read_nvs(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
-    nvs_handle nvs_h;
-    ESP_ERROR_CHECK(nvs_open("storage", NVS_READONLY, &nvs_h));
-    ESP_ERROR_CHECK(nvs_get_u16(nvs_h, "Kp", prop));
-    ESP_ERROR_CHECK(nvs_get_u16(nvs_h, "Ki", integral));
-    ESP_ERROR_CHECK(nvs_get_u16(nvs_h, "Kd", deriv));
-    nvs_close(nvs_h);
+void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
+    read_nvs(prop, integral, deriv);
 }
 
 int euler_count = 0;
@@ -65,7 +56,7 @@ void app_main() {
     printf("%" PRIu16 "\n", kD);
 
     TaskHandle_t pid_task_handle = NULL;
-    xTaskCreate(pid_task, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
+    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
 
     dac_output_enable(DAC_CHANNEL_2);
 

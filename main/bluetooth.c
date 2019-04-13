@@ -209,6 +209,34 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
        	    break;
         case ESP_GATTS_READ_EVT:
             ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_READ_EVT");
+            
+            if (param->read.handle == handle_table[IDX_CHAR_VAL_PID]) {
+                
+                uint16_t kP, kI, kD;
+                get_pid_gains(&kP, &kI, &kD);
+
+                esp_gatt_rsp_t rsp;
+                memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
+                rsp.attr_value.handle = param->read.handle;
+                rsp.attr_value.len = 1;
+                // rsp.attr_value.value[0] = kP >> 8;
+                // rsp.attr_value.value[1] = kP & 0xFF;
+                // rsp.attr_value.value[2] = kI >> 8;
+                // rsp.attr_value.value[3] = kI & 0xFF;
+                // rsp.attr_value.value[4] = kD >> 8;
+                // rsp.attr_value.value[5] = kD & 0xFF;
+
+                rsp.attr_value.value[0] = 0;
+                // rsp.attr_value.value[1] = 1;
+                // rsp.attr_value.value[2] = 2;
+                // rsp.attr_value.value[3] = 3;
+                // rsp.attr_value.value[4] = 4;
+                // rsp.attr_value.value[5] = 5;
+
+                esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
+                                            ESP_GATT_OK, &rsp);
+            }
+
        	    break;
         case ESP_GATTS_WRITE_EVT:
             if (!param->write.is_prep){
@@ -216,13 +244,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                 ESP_LOGI(GATTS_TABLE_TAG, "GATT_WRITE_EVT, handle = %d, value len = %d, value :", param->write.handle, param->write.len);
                 esp_log_buffer_hex(GATTS_TABLE_TAG, param->write.value, param->write.len);
 
-                if (handle_table[IDX_CHAR_VAL_PID] == param->write.handle && param->write.len > 1){
-                    // if (param->write.value[0] == 0x0A) {
-                    //     uint8_t notify_data[5] = {1, 2, 3, 4, 5};
-                    //     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[IDX_CHAR_VAL_ANGLES],
-                    //                             sizeof(notify_data), notify_data, false);
+                if (handle_table[IDX_CHAR_VAL_PID] == param->write.handle && param->write.len == 6){
+                    uint16_t kP, kI, kD;
+                    kP = (param->write.value[0] << 8) | param->write.value[1];
+                    kI = (param->write.value[2] << 8) | param->write.value[3];
+                    kD = (param->write.value[4] << 8) | param->write.value[5];
 
-                    // }
+                    on_new_pid_gains(kP, kI, kD);
+
                     printf("yooooo\n");
                 }
             }

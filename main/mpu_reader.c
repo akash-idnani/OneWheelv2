@@ -157,7 +157,7 @@ static void init_mpu() {
     mpu_set_dmp_state(1); 
 }
 
-void pid_task(void* pvParameters) {
+void euler_reader(void* pvParameters) {
     void (*callback) (long*) = pvParameters;
 
     init_mpu();
