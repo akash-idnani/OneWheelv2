@@ -98,6 +98,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
 /* Service */
 static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x00FF;
 static const uint16_t GATTS_CHAR_UUID_TEST_A       = 0xFF01;
+static const uint16_t GATTS_CHAR_UUID_PID       = 0xFF02;
 
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
@@ -110,7 +111,7 @@ static const uint8_t char_value[4]                 = {0x11, 0x22, 0x33, 0x44};
 
 static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] = {
     // Service Declaration
-    [IDX_ANGLE_SVC]        =
+    [IDX_MAIN_SVC]        =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ,
       sizeof(uint16_t), sizeof(GATTS_SERVICE_UUID_TEST), (uint8_t *)&GATTS_SERVICE_UUID_TEST}},
 
@@ -121,7 +122,17 @@ static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] = {
 
     /* Characteristic Value */
     [IDX_CHAR_VAL_ANGLES] =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_TEST_A, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_TEST_A, ESP_GATT_PERM_READ,
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_value), (uint8_t *)char_value}},
+
+        /* Characteristic Declaration */
+    [IDX_CHAR_PID]     =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write_notify}},
+
+        /* Characteristic Value */
+    [IDX_CHAR_VAL_PID] =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_PID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_value), (uint8_t *)char_value}},
 
 };
@@ -205,13 +216,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                 ESP_LOGI(GATTS_TABLE_TAG, "GATT_WRITE_EVT, handle = %d, value len = %d, value :", param->write.handle, param->write.len);
                 esp_log_buffer_hex(GATTS_TABLE_TAG, param->write.value, param->write.len);
 
-                if (handle_table[IDX_CHAR_VAL_ANGLES] == param->write.handle && param->write.len == 2){
-                    if (param->write.value[0] == 0x0A) {
-                        uint8_t notify_data[5] = {1, 2, 3, 4, 5};
-                        esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[IDX_CHAR_VAL_ANGLES],
-                                                sizeof(notify_data), notify_data, false);
+                if (handle_table[IDX_CHAR_VAL_PID] == param->write.handle && param->write.len > 1){
+                    // if (param->write.value[0] == 0x0A) {
+                    //     uint8_t notify_data[5] = {1, 2, 3, 4, 5};
+                    //     esp_ble_gatts_send_indicate(gatts_if, param->write.conn_id, handle_table[IDX_CHAR_VAL_ANGLES],
+                    //                             sizeof(notify_data), notify_data, false);
 
-                    }
+                    // }
+                    printf("yooooo\n");
                 }
             }
       	    break;
@@ -262,7 +274,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             else {
                 ESP_LOGI(GATTS_TABLE_TAG, "create attribute table successfully, the number handle = %d\n",param->add_attr_tab.num_handle);
                 memcpy(handle_table, param->add_attr_tab.handles, sizeof(handle_table));
-                esp_ble_gatts_start_service(handle_table[IDX_ANGLE_SVC]);
+                esp_ble_gatts_start_service(handle_table[IDX_MAIN_SVC]);
             }
             break;
         }
