@@ -106,7 +106,7 @@ static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_C
 static const uint8_t char_prop_read                =  ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
 static const uint8_t char_prop_read_write_notify   = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
-static const uint8_t char_value[4]                 = {0x11, 0x22, 0x33, 0x44};
+uint8_t char_value[6]                 = {0x00, 0x01, 0x00, 0x02, 0x00, 0x03};
 
 
 static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] = {
@@ -201,6 +201,16 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             }
             adv_config_done |= SCAN_RSP_CONFIG_FLAG;
 
+            uint16_t kP, kI, kD;
+            get_pid_gains(&kP, &kI, &kD);
+
+            char_value[0] = kP >> 8;
+            char_value[1] = kP & 0xFF;
+            char_value[2] = kI >> 8;
+            char_value[3] = kI & 0xFF;
+            char_value[4] = kD >> 8;
+            char_value[5] = kD & 0xFF;
+
             esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, HRS_IDX_NB, SVC_INST_ID);
             if (create_attr_ret){
                 ESP_LOGE(GATTS_TABLE_TAG, "create attr table failed, error code = %x", create_attr_ret);
@@ -209,33 +219,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
        	    break;
         case ESP_GATTS_READ_EVT:
             ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_READ_EVT");
-            
-            if (param->read.handle == handle_table[IDX_CHAR_VAL_PID]) {
-                
-                uint16_t kP, kI, kD;
-                get_pid_gains(&kP, &kI, &kD);
-
-                esp_gatt_rsp_t rsp;
-                memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
-                rsp.attr_value.handle = param->read.handle;
-                rsp.attr_value.len = 1;
-                // rsp.attr_value.value[0] = kP >> 8;
-                // rsp.attr_value.value[1] = kP & 0xFF;
-                // rsp.attr_value.value[2] = kI >> 8;
-                // rsp.attr_value.value[3] = kI & 0xFF;
-                // rsp.attr_value.value[4] = kD >> 8;
-                // rsp.attr_value.value[5] = kD & 0xFF;
-
-                rsp.attr_value.value[0] = 0;
-                // rsp.attr_value.value[1] = 1;
-                // rsp.attr_value.value[2] = 2;
-                // rsp.attr_value.value[3] = 3;
-                // rsp.attr_value.value[4] = 4;
-                // rsp.attr_value.value[5] = 5;
-
-                esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
-                                            ESP_GATT_OK, &rsp);
-            }
 
        	    break;
         case ESP_GATTS_WRITE_EVT:
