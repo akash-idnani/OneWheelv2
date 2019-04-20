@@ -27,11 +27,15 @@ enum {
     IDX_CHAR_PID,
     IDX_CHAR_VAL_PID,
 
+    IDX_CHAR_INFO,
+    IDX_CHAR_VAL_INFO,
+
     HRS_IDX_NB,
 };
 
 void init_ble();
 void send_euler(long* euler);
+void send_info(uint8_t motor, uint8_t reverse, uint8_t battery, uint8_t speed);
 void on_new_pid_gains(uint16_t prop, uint16_t integral, uint16_t deriv);
 void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv);
 

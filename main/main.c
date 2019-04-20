@@ -37,7 +37,7 @@ void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
     read_nvs(prop, integral, deriv);
 }
 
-void set_motor(float value) {
+uint8_t set_motor(float value) {
     if (value < 0) {
         value = -value;
         gpio_set_level(PIN_REVERSE, 1);
@@ -46,6 +46,7 @@ void set_motor(float value) {
     }
 
     dac_output_voltage(DAC_CHANNEL_2, 255 - value);
+    return 255 - value;
 }
 
 int euler_count = 0;
@@ -57,6 +58,8 @@ void on_new_euler(long* euler) {
     if (euler_count++ > 5) {
         // printf("Euler: %ld, %ld, %ld \n", euler[0], euler[1], euler[2]);
         send_euler(euler);
+        send_info(new_motor_out < 0 ? -new_motor_out : new_motor_out, new_motor_out < 0, 
+                50, 10);
         euler_count = 0;
     }
 }

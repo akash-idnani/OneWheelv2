@@ -99,6 +99,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
 static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x00FF;
 static const uint16_t GATTS_CHAR_UUID_TEST_A       = 0xFF01;
 static const uint16_t GATTS_CHAR_UUID_PID       = 0xFF02;
+static const uint16_t GATTS_CHAR_UUID_INFO       = 0xFF03;
 
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
@@ -133,6 +134,16 @@ static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] = {
         /* Characteristic Value */
     [IDX_CHAR_VAL_PID] =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_PID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_value), (uint8_t *)char_value}},
+
+      /* Characteristic Declaration */
+    [IDX_CHAR_INFO]     =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read_write_notify}},
+
+    /* Characteristic Value */
+    [IDX_CHAR_VAL_INFO] =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_INFO, ESP_GATT_PERM_READ,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_value), (uint8_t *)char_value}},
 
 };
@@ -385,4 +396,12 @@ void send_euler(long* euler) {
 
     esp_ble_gatts_send_indicate(connection_info.gatts_if, connection_info.conn_id, handle_table[IDX_CHAR_VAL_ANGLES],
         sizeof(long) * 3, (uint8_t *) euler, false);
+}
+
+void send_info(uint8_t motor, uint8_t reverse, uint8_t battery, uint8_t speed) {
+    if (!connection_info.connected) return;
+
+    uint8_t to_send[4] = {motor, reverse, battery, speed}; 
+    esp_ble_gatts_send_indicate(connection_info.gatts_if, connection_info.conn_id, handle_table[IDX_CHAR_VAL_INFO],
+        sizeof(uint8_t) * 4, to_send, false);
 }
