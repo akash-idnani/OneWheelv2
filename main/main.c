@@ -12,7 +12,9 @@
 #include "mpu_reader.h"
 #include "bluetooth.h"
 #include "nvs_handler.h"
+#include "pid.h"
 
+#define PIN_REVERSE 18
 
 
 void delay_ms(unsigned long num_ms) {
@@ -35,8 +37,23 @@ void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
     read_nvs(prop, integral, deriv);
 }
 
+void set_motor(float value) {
+    if (value < 0) {
+        value = -value;
+        gpio_set_level(PIN_REVERSE, 1);
+    } else {
+        gpio_set_level(PIN_REVERSE, 0);
+    }
+
+    dac_output_voltage(DAC_CHANNEL_2, 255 - value);
+}
+
 int euler_count = 0;
 void on_new_euler(long* euler) {
+    float new_motor_out = pid_compute(euler[1] / 65536);
+    set_motor(new_motor_out);
+    // printf("%.1f \n", new_motor_out);
+
     if (euler_count++ > 5) {
         // printf("Euler: %ld, %ld, %ld \n", euler[0], euler[1], euler[2]);
         send_euler(euler);
@@ -55,10 +72,22 @@ void app_main() {
     printf("%" PRIu16 ", ", kI);
     printf("%" PRIu16 "\n", kD);
 
-    TaskHandle_t pid_task_handle = NULL;
-    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
+    pid_set_tunings(kP, kI, kD);
+
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = (1ULL << PIN_REVERSE);
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 0;
+    gpio_config(&io_conf);
+
+    gpio_set_level(PIN_REVERSE, 0);
 
     dac_output_enable(DAC_CHANNEL_2);
+
+    TaskHandle_t pid_task_handle = NULL;
+    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
 
     
     // uint8_t output_data=0;
@@ -75,16 +104,6 @@ void app_main() {
     // adc2_config_channel_atten( 7, ADC_ATTEN_0db );  
 
     // dac_output_enable(DAC_CHANNEL_2);
-
-    // gpio_config_t io_conf;
-    // io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    // io_conf.mode = GPIO_MODE_OUTPUT;
-    // io_conf.pin_bit_mask = (1ULL << 18);
-    // io_conf.pull_down_en = 0;
-    // io_conf.pull_up_en = 0;
-    // gpio_config(&io_conf);
-
-    // gpio_set_level(18, 0);
 
     // dac_out_voltage(DAC_CHANNEL_2, 255);
     // int count = 255;
