@@ -3,7 +3,7 @@
 
 unsigned long last_time;
 float setpoint = 0;
-float err_sum, last_err;
+float err_sum, last_err, last_input;
 float kP, kI, kD;
 
 int sample_time = 5;
@@ -11,11 +11,12 @@ int sample_time = 5;
 float pid_compute(float input) {
     float error = setpoint - input;
     err_sum += error;
-    double deriv_err = error - last_err;
+    double deriv_input = input - last_input;
 
-    float output = kP * error + kI * err_sum + kD * deriv_err;
+    float output = kP * error + kI * err_sum - kD * deriv_input;
 
     last_err = error;
+    last_input = input;
 
     if (output > 255) return 255;
     if (output < -255) return -255;
