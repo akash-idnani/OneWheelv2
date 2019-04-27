@@ -10,6 +10,7 @@
 
 #include "motiondriver_defs.h"
 #include "mpu_reader.h"
+#include "motor_controller.h"
 #include "bluetooth.h"
 #include "nvs_handler.h"
 #include "pid.h"
@@ -52,11 +53,8 @@ uint8_t set_motor(float value) {
 int euler_count = 0;
 void on_new_euler(long* euler) {
     float new_motor_out = pid_compute(euler[1] / 65536);
-    set_motor(new_motor_out);
-    // printf("%.1f \n", new_motor_out);
 
     if (euler_count++ > 5) {
-        // printf("Euler: %ld, %ld, %ld \n", euler[0], euler[1], euler[2]);
         send_euler(euler);
         send_info(new_motor_out < 0 ? -new_motor_out : new_motor_out, new_motor_out < 0, 
                 50, 10);
@@ -71,26 +69,20 @@ void app_main() {
     uint16_t kP, kI, kD;
     read_nvs(&kP, &kI, &kD);
 
-    printf("%" PRIu16 ", ", kP);
-    printf("%" PRIu16 ", ", kI);
-    printf("%" PRIu16 "\n", kD);
-
     pid_set_tunings(kP, kI, kD);
 
-    gpio_config_t io_conf;
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pin_bit_mask = (1ULL << PIN_REVERSE);
-    io_conf.pull_down_en = 0;
-    io_conf.pull_up_en = 0;
-    gpio_config(&io_conf);
-
-    gpio_set_level(PIN_REVERSE, 0);
-
-    dac_output_enable(DAC_CHANNEL_2);
+    motor_controller_init();
 
     TaskHandle_t pid_task_handle = NULL;
-    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 5, &pid_task_handle); 
+    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
+
+    uint16_t count = 0;
+    while (1) {
+        count = count + 1 % 1024;
+        set_brake(count);
+        delay_ms(100);
+        printf("%d \n", count);
+    }
 
     
     // uint8_t output_data=0;
