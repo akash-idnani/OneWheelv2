@@ -11,7 +11,7 @@
 #define PIN_HALL_GREEN 34
 #define PIN_HALL_BLUE 17
 
-#define SPEED_READING_AVG_COUNT 10
+#define SPEED_READING_AVG_COUNT 5
 
 void motor_controller_init();
 void set_brake(uint32_t strength);

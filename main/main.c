@@ -61,7 +61,6 @@ void on_new_euler(long* euler) {
         send_info(new_motor_out < 0 ? -new_motor_out : new_motor_out, new_motor_out < 0, 
                 50, 10);
         euler_count = 0;
-        printf("%d\n", is_rolling);
     }
 }
 

@@ -74,8 +74,8 @@ void motor_controller_init() {
     configure_brake();
 }
 
-unsigned long get_average(unsigned long *arr, int length) {
-    unsigned long sum = 0;
+int get_average(int *arr, int length) {
+    int sum = 0;
     for (int i = 0; i < length; i++) {
         sum += arr[i];
     }
@@ -93,9 +93,12 @@ void speed_reader(void* pvParameters) {
     unsigned long curr_time = 0;
     unsigned long last_hall_time = 0;
 
-    unsigned long count = 0;
-
     int *is_rolling = (int*) pvParameters;
+    int direction = 0;
+
+    int past_directions[SPEED_READING_AVG_COUNT];
+    int past_directions_index = 0;
+    for (int i = 0; i < SPEED_READING_AVG_COUNT; i++) past_directions[i] = 0;
     
     while(1) {
         delay_ms(1);
@@ -103,11 +106,24 @@ void speed_reader(void* pvParameters) {
         if (curr_time - last_hall_time > 150) {
             *is_rolling = 0;
         } else {
-            *is_rolling = 1;
+            *is_rolling = get_average(past_directions, SPEED_READING_AVG_COUNT) > 0 ? 1 : -1;
         }
 
         if (!xQueueReceive(hall_queue, &hall_pin, 0)) continue;
         if (hall_pin == last_hall_pin) continue;
+
+        if ((hall_pin == PIN_HALL_BLUE && last_hall_pin == PIN_HALL_GREEN) ||
+            (hall_pin == PIN_HALL_YELLOW && last_hall_pin == PIN_HALL_BLUE) ||
+            (hall_pin == PIN_HALL_GREEN && last_hall_pin == PIN_HALL_YELLOW)) {
+                direction = 1;
+        } else if ((hall_pin == PIN_HALL_GREEN && last_hall_pin == PIN_HALL_BLUE) ||
+                    (hall_pin == PIN_HALL_YELLOW && last_hall_pin == PIN_HALL_GREEN) ||
+                    (hall_pin == PIN_HALL_BLUE && last_hall_pin == PIN_HALL_YELLOW)) {
+            direction = -1;
+        }
+
+        past_directions[past_directions_index] = direction;
+        past_directions_index = (past_directions_index + 1) % SPEED_READING_AVG_COUNT;
 
         last_hall_pin = hall_pin;
         last_hall_time = curr_time;        
