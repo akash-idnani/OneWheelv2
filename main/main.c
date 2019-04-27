@@ -53,6 +53,7 @@ uint8_t set_motor(float value) {
 int euler_count = 0;
 void on_new_euler(long* euler) {
     float new_motor_out = pid_compute(euler[1] / 65536);
+    //set_motor(new_motor_out);
 
     if (euler_count++ > 5) {
         send_euler(euler);
@@ -75,14 +76,6 @@ void app_main() {
 
     TaskHandle_t pid_task_handle = NULL;
     xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
-
-    uint16_t count = 0;
-    while (1) {
-        count = count + 1 % 1024;
-        set_brake(count);
-        delay_ms(100);
-        printf("%d \n", count);
-    }
 
     
     // uint8_t output_data=0;
