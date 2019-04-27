@@ -17,6 +17,7 @@
 
 #define PIN_REVERSE 18
 
+static int is_rolling = 0;
 
 void delay_ms(unsigned long num_ms) {
     vTaskDelay(num_ms / portTICK_RATE_MS);
@@ -53,13 +54,14 @@ uint8_t set_motor(float value) {
 int euler_count = 0;
 void on_new_euler(long* euler) {
     float new_motor_out = pid_compute(euler[1] / 65536);
-    //set_motor(new_motor_out);
+    set_motor(new_motor_out);
 
     if (euler_count++ > 5) {
         send_euler(euler);
         send_info(new_motor_out < 0 ? -new_motor_out : new_motor_out, new_motor_out < 0, 
                 50, 10);
         euler_count = 0;
+        printf("%d\n", is_rolling);
     }
 }
 
@@ -73,9 +75,13 @@ void app_main() {
     pid_set_tunings(kP, kI, kD);
 
     motor_controller_init();
+    set_brake(1023);
 
     TaskHandle_t pid_task_handle = NULL;
     xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
+
+    TaskHandle_t speed_reader_task_handle = NULL;
+    xTaskCreate(speed_reader, "Speed", 2048, &is_rolling, 5, &speed_reader_task_handle); 
 
     
     // uint8_t output_data=0;

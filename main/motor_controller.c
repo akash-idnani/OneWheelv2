@@ -1,12 +1,19 @@
 #include "esp_system.h"
 
+#include "freertos/FreeRTOS.h"
+#include <freertos/queue.h>
+
 #include <driver/dac.h>
 #include <driver/ledc.h>
 
 #include "motor_controller.h"
+#include "motiondriver_defs.h"
+
+static xQueueHandle hall_queue = NULL;
 
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
-    ets_printf("Hallo");
+   uint32_t gpio_num = (uint32_t) arg;
+   xQueueSendFromISR(hall_queue, &gpio_num, NULL);
 }
 
 void configure_brake() {
@@ -65,7 +72,46 @@ void motor_controller_init() {
 
     gpio_set_level(PIN_REVERSE, 0);
     configure_brake();
+}
+
+unsigned long get_average(unsigned long *arr, int length) {
+    unsigned long sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += arr[i];
+    }
+
+    return sum / length;
+}
+
+void speed_reader(void* pvParameters) {
     configure_hall_interrupts();
+    hall_queue = xQueueCreate(30, sizeof(uint32_t));
+
+    uint32_t hall_pin;
+    uint32_t last_hall_pin = 0;
+
+    unsigned long curr_time = 0;
+    unsigned long last_hall_time = 0;
+
+    unsigned long count = 0;
+
+    int *is_rolling = (int*) pvParameters;
+    
+    while(1) {
+        delay_ms(1);
+        get_ms(&curr_time);
+        if (curr_time - last_hall_time > 150) {
+            *is_rolling = 0;
+        } else {
+            *is_rolling = 1;
+        }
+
+        if (!xQueueReceive(hall_queue, &hall_pin, 0)) continue;
+        if (hall_pin == last_hall_pin) continue;
+
+        last_hall_pin = hall_pin;
+        last_hall_time = curr_time;        
+    }
 }
 
 void set_brake(uint32_t strength) {

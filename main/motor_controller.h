@@ -11,7 +11,10 @@
 #define PIN_HALL_GREEN 34
 #define PIN_HALL_BLUE 17
 
+#define SPEED_READING_AVG_COUNT 10
+
 void motor_controller_init();
 void set_brake(uint32_t strength);
+void speed_reader(void* pvParameters);
 
 #endif
