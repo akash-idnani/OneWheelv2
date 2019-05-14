@@ -245,8 +245,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                     kD = (param->write.value[4] << 8) | param->write.value[5];
 
                     on_new_pid_gains(kP, kI, kD);
-
-                    printf("yooooo\n");
                 }
             }
       	    break;

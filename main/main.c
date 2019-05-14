@@ -33,6 +33,7 @@ void on_new_pid_gains(uint16_t prop, uint16_t integral, uint16_t deriv) {
     printf("%" PRIu16 "\n", deriv);
 
     set_nvs(prop, integral, deriv);
+    pid_set_tunings(prop, integral, deriv);
 }
 
 void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
