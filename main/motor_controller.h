@@ -15,6 +15,7 @@
 
 void motor_controller_init();
 void set_brake(uint32_t strength);
+uint8_t set_motor(float value);
 void speed_reader(void* pvParameters);
 
 #endif

@@ -133,3 +133,15 @@ void speed_reader(void* pvParameters) {
 void set_brake(uint32_t strength) {
     ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, strength, 0);
 }
+
+uint8_t set_motor(float value) {
+    if (value < 0) {
+        set_brake(1023 + value * 4);
+        dac_output_voltage(DAC_CHANNEL_2, 255);
+    } else {
+        set_brake(1023);
+        dac_output_voltage(DAC_CHANNEL_2, 255 - value);
+    }
+
+    return 255 - value;
+}

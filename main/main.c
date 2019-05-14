@@ -39,18 +39,6 @@ void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
     read_nvs(prop, integral, deriv);
 }
 
-uint8_t set_motor(float value) {
-    if (value < 0) {
-        value = -value;
-        gpio_set_level(PIN_REVERSE, 1);
-    } else {
-        gpio_set_level(PIN_REVERSE, 0);
-    }
-
-    dac_output_voltage(DAC_CHANNEL_2, 255 - value);
-    return 255 - value;
-}
-
 int euler_count = 0;
 void on_new_euler(long* euler) {
     float new_motor_out = pid_compute(euler[1] / 65536);
@@ -66,7 +54,7 @@ void on_new_euler(long* euler) {
 
 void app_main() {
     init_ble();
-    // reset_nvs();
+    //reset_nvs();
 
     uint16_t kP, kI, kD;
     read_nvs(&kP, &kI, &kD);
@@ -75,7 +63,7 @@ void app_main() {
 
     motor_controller_init();
     set_brake(1023);
-
+    
     TaskHandle_t pid_task_handle = NULL;
     xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
 
