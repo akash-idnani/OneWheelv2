@@ -61,6 +61,7 @@ void app_main() {
     read_nvs(&kP, &kI, &kD);
 
     pid_set_tunings(kP, kI, kD);
+    pid_set_output_limits(-255, 255);
 
     motor_controller_init();
     set_brake(1023);
