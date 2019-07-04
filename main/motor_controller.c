@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "motor_controller.h"
+#include <comm_uart.h>
 #include "motiondriver_defs.h"
 
 void motor_controller_init() {
@@ -29,11 +30,12 @@ void motor_controller_init() {
 }
 
 void speed_reader(void* pvParameters) {
+    comm_uart_init();
     while(1) {
         delay_ms(500);
-        char* test_str = "This is a test string.\n";
-        printf(test_str);
-        uart_write_bytes(UART_NUM_2, (const char*)test_str, strlen(test_str));
+        //char* test_str = "This is a test string.\n";
+        //printf(test_str);
+        //uart_write_bytes(UART_NUM_2, (const char*)test_str, strlen(test_str));
     }
 }
 

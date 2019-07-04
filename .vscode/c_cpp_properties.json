@@ -5,7 +5,7 @@
             "name": "ESP32-Win",
             "includePath": [
                 "${workspaceRoot}",
-                "${workspaceRoot}/components",
+                "${workspaceRoot}/components/**",
                 "${workspaceRoot}/build",
                 "${workspaceRoot}/build/include",
                 "${env:IDF_PATH}/components/bt/bluedroid/utils/include",
