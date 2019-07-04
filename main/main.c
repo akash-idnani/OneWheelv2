@@ -64,51 +64,10 @@ void app_main() {
     pid_set_output_limits(-255, 255);
 
     motor_controller_init();
-    set_brake(1023);
     
     TaskHandle_t pid_task_handle = NULL;
     xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
 
     TaskHandle_t speed_reader_task_handle = NULL;
     xTaskCreate(speed_reader, "Speed", 2048, &is_rolling, 5, &speed_reader_task_handle); 
-
-    
-    // uint8_t output_data=0;
-    // int     read_raw;
-    // esp_err_t r;
-
-    // gpio_num_t adc_gpio_num;
-
-    // r = adc2_pad_get_io_num( 7, &adc_gpio_num );
-    // assert( r == ESP_OK );
-
-    // //be sure to do the init before using adc2. 
-    // printf("adc2_init...\n");
-    // adc2_config_channel_atten( 7, ADC_ATTEN_0db );  
-
-    // dac_output_enable(DAC_CHANNEL_2);
-
-    // dac_out_voltage(DAC_CHANNEL_2, 255);
-    // int count = 255;
-    // delay_ms(100);
-    // while (count > 200) {
-    //     dac_out_voltage(DAC_CHANNEL_2, count--);
-    //     if (count < 0) count = 0;
-    //     printf("%d\n", count);
-
-    //     r = adc2_get_raw( 7, ADC_WIDTH_12Bit, &read_raw);
-    //     if ( r == ESP_OK ) {
-    //         printf("%d: %d\n", output_data, read_raw );
-    //     } else if ( r == ESP_ERR_INVALID_STATE ) {
-    //         printf("%s: ADC2 not initialized yet.\n", esp_err_to_name(r));
-    //     } else if ( r == ESP_ERR_TIMEOUT ) {
-    //         //This can not happen in this example. But if WiFi is in use, such error code could be returned.
-    //         printf("%s: ADC2 is in use by Wi-Fi.\n", esp_err_to_name(r));
-    //     } else {
-    //         printf("%s\n", esp_err_to_name(r));
-    //     }
-
-    //     delay_ms(100);
-    // }
-
 }
