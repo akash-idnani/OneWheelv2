@@ -20,7 +20,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "ch.h"
 
 // CAN status sent by VESC
 typedef struct {

@@ -1,148 +1,113 @@
 #include "comm_uart.h"
 #include "bldc_interface_uart.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+
+#include "driver/uart.h"
+#include "esp_log.h"
+
 #include <string.h>
 
-static void send_packet(unsigned char *data, unsigned int len);
+#define TAG "YO"
+#define EX_UART_NUM UART_NUM_2
 
-// Threads
-static THD_FUNCTION(timer_thread, arg);
-static THD_WORKING_AREA(timer_thread_wa, 512);
-static THD_FUNCTION(packet_process_thread, arg);
-static THD_WORKING_AREA(packet_process_thread_wa, 4096);
-static thread_t *process_tp;
+static QueueHandle_t uart_queue;
 
-// Variables
-static uint8_t serial_rx_buffer[SERIAL_RX_BUFFER_SIZE];
-static int serial_rx_read_pos = 0;
-static int serial_rx_write_pos = 0;
-
-/*
- * This callback is invoked when a character is received but the application
- * was not ready to receive it, the character is passed as parameter.
- */
-static void rxchar(UARTDriver *uartp, uint16_t c) {
-	(void)uartp;
-
-	/*
-	 * Put the character in a buffer and notify a thread that there is data
-	 * available. An alternative way is to use
-	 *
-	 * packet_process_byte(c);
-	 *
-	 * here directly and skip the thread. However, this could drop bytes if
-	 * processing packets takes a long time.
-	 */
-
-	serial_rx_buffer[serial_rx_write_pos++] = c;
-
-	if (serial_rx_write_pos == SERIAL_RX_BUFFER_SIZE) {
-		serial_rx_write_pos = 0;
-	}
-
-	chEvtSignalI(process_tp, (eventmask_t) 1);
-}
-
-
-/*
- * UART driver configuration structure.
- */
-static UARTConfig uart_cfg = {
-		txend1,
-		txend2,
-		rxend,
-		rxchar,
-		rxerr,
-		UART_BAUDRATE,
-		0,
-		USART_CR2_LINEN,
-		0
-};
-
-static THD_FUNCTION(packet_process_thread, arg) {
-	(void)arg;
-
-	chRegSetThreadName("comm_uart");
-
-	process_tp = chThdGetSelfX();
-
-	for(;;) {
-		chEvtWaitAny((eventmask_t) 1);
-
-		/*
-		 * Wait for data to become available and process it as long as there is data.
-		 */
-
-		while (serial_rx_read_pos != serial_rx_write_pos) {
-			bldc_interface_uart_process_byte(serial_rx_buffer[serial_rx_read_pos++]);
-
-			if (serial_rx_read_pos == SERIAL_RX_BUFFER_SIZE) {
-				serial_rx_read_pos = 0;
-			}
-		}
-	}
-}
-
-/**
- * Callback that the packet handler uses to send an assembled packet.
- *
- * @param data
- * Data array pointer
- * @param len
- * Data array length
- */
 static void send_packet(unsigned char *data, unsigned int len) {
 	if (len > (PACKET_MAX_PL_LEN + 5)) {
 		return;
 	}
 
-	// Wait for the previous transmission to finish.
-	while (UART_DEV.txstate == UART_TX_ACTIVE) {
-		chThdSleep(1);
-	}
-
-	// Copy this data to a new buffer in case the provided one is re-used
-	// after this function returns.
 	static uint8_t buffer[PACKET_MAX_PL_LEN + 5];
 	memcpy(buffer, data, len);
-
-	// Send the data over UART
-	uartStartSend(&UART_DEV, len, buffer);
+	
+	uart_write_bytes(UART_NUM_2, (const char *) data, len);
 }
 
-/**
- * This thread is only for calling the timer function once
- * per millisecond. Can also be implementer using interrupts
- * if no RTOS is available.
- */
-static THD_FUNCTION(timer_thread, arg) {
-	(void)arg;
-	chRegSetThreadName("packet timer");
-
-	for(;;) {
+void timer_task(void *pvParameters) {
+	while(1) {
 		bldc_interface_uart_run_timer();
-		chThdSleepMilliseconds(1);
+		vTaskDelay(1 / portTICK_RATE_MS);
 	}
+}
+
+void uart_event_task(void *pvParameters) {
+	uart_event_t event;
+    uint8_t* dtmp = (uint8_t*) malloc(2048);
+    for(;;) {
+        //Waiting for UART event.
+        if(xQueueReceive(uart_queue, (void * )&event, (portTickType)portMAX_DELAY)) {
+            bzero(dtmp, 2048);
+            ESP_LOGI("HELLO", "uart[%d] event:", UART_NUM_2);
+            switch(event.type) {
+                case UART_DATA:
+                    ESP_LOGI(TAG, "[UART DATA]: %d", event.size);
+                    uart_read_bytes(EX_UART_NUM, dtmp, event.size, portMAX_DELAY);
+					for (int i = 0; i < event.size; i++) {
+						bldc_interface_uart_process_byte(dtmp[i]);
+					}
+                    ESP_LOGI(TAG, "[DATA EVT]:");
+                    break;
+                //Event of HW FIFO overflow detected
+                case UART_FIFO_OVF:
+                    ESP_LOGI(TAG, "hw fifo overflow");
+                    uart_flush_input(EX_UART_NUM);
+                    xQueueReset(uart_queue);
+                    break;
+                //Event of UART ring buffer full
+                case UART_BUFFER_FULL:
+                    ESP_LOGI(TAG, "ring buffer full");
+                    // If buffer full happened, you should consider encreasing your buffer size
+                    // As an example, we directly flush the rx buffer here in order to read more data.
+                    uart_flush_input(EX_UART_NUM);
+                    xQueueReset(uart_queue);
+                    break;
+                //Event of UART RX break detected
+                case UART_BREAK:
+                    ESP_LOGI(TAG, "uart rx break");
+                    break;
+                //Event of UART parity check error
+                case UART_PARITY_ERR:
+                    ESP_LOGI(TAG, "uart parity error");
+                    break;
+                //Event of UART frame error
+                case UART_FRAME_ERR:
+                    ESP_LOGI(TAG, "uart frame error");
+                    break;
+                //Others
+                default:
+                    ESP_LOGI(TAG, "uart event type: %d", event.type);
+                    break;
+            }
+        }
+    }
+    free(dtmp);
+    dtmp = NULL;
+    vTaskDelete(NULL);
 }
 
 void comm_uart_init(void) {
-	// Initialize UART
-	uartStart(&UART_DEV, &uart_cfg);
-	palSetPadMode(UART_TX_PORT, UART_TX_PIN, PAL_MODE_ALTERNATE(UART_GPIO_AF) |
-			PAL_STM32_OSPEED_HIGHEST |
-			PAL_STM32_PUDR_PULLUP);
-	palSetPadMode(UART_RX_PORT, UART_RX_PIN, PAL_MODE_ALTERNATE(UART_GPIO_AF) |
-			PAL_STM32_OSPEED_HIGHEST |
-			PAL_STM32_PUDR_PULLUP);
+	uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+    };
 
-	// Initialize the bldc interface and provide a send function
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM_2, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_2, 17, 
+        16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+        
+    const int uart_buffer_size = (1024 * 2);
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_2, uart_buffer_size, \
+                                        uart_buffer_size, 20, &uart_queue, 0));
 	bldc_interface_uart_init(send_packet);
+    
+	TaskHandle_t timer_task_handle = NULL;
+    xTaskCreate(timer_task, "Timer", 2048, NULL, 5, &timer_task_handle); 
 
-	// Start processing thread
-	chThdCreateStatic(packet_process_thread_wa, sizeof(packet_process_thread_wa),
-			NORMALPRIO, packet_process_thread, NULL);
-
-	// Start timer thread
-	chThdCreateStatic(timer_thread_wa, sizeof(timer_thread_wa),
-			NORMALPRIO, timer_thread, NULL);
+	xTaskCreate(uart_event_task, "uart_event_task", 2048, NULL, 12, NULL);
 }

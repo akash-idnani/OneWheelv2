@@ -8,34 +8,29 @@
 
 #include "motor_controller.h"
 #include <comm_uart.h>
+#include <bldc_interface.h>
+#include <bldc_interface_uart.h>
 #include "motiondriver_defs.h"
 
-void motor_controller_init() {
-    uart_config_t uart_config = {
-        .baud_rate = 115200,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
-    };
+void bldc_val_received(mc_values *val) {
+    
+}
 
-    ESP_ERROR_CHECK(uart_param_config(UART_NUM_2, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_2, 17, 
-        16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-        
-    const int uart_buffer_size = (1024 * 2);
-    QueueHandle_t uart_queue;
-    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_2, uart_buffer_size, \
-                                        uart_buffer_size, 10, &uart_queue, 0));
+void motor_controller_init() {
+    comm_uart_init();
+    bldc_interface_set_rx_value_func(bldc_val_received);
 }
 
 void speed_reader(void* pvParameters) {
-    comm_uart_init();
-    while(1) {
-        delay_ms(500);
-        //char* test_str = "This is a test string.\n";
-        //printf(test_str);
-        //uart_write_bytes(UART_NUM_2, (const char*)test_str, strlen(test_str));
+    while (1) {
+        for (int i = -10000; i < 10000; i++) {
+            delay_ms(2);
+            bldc_interface_set_rpm(i);
+        }
+        for (int i = 10000; i > -10000; i--) {
+            delay_ms(2);
+            bldc_interface_set_rpm(i);
+        }
     }
 }
 

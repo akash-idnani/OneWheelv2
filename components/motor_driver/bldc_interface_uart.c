@@ -23,8 +23,6 @@
  */
 
 #include "bldc_interface_uart.h"
-#include "ch.h"
-#include "hal.h"
 #include "bldc_interface.h"
 
 // Settings

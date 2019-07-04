@@ -65,9 +65,10 @@ void app_main() {
 
     motor_controller_init();
     
-    TaskHandle_t pid_task_handle = NULL;
-    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
-
+    //TaskHandle_t pid_task_handle = NULL;
+    //xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
+    
     TaskHandle_t speed_reader_task_handle = NULL;
     xTaskCreate(speed_reader, "Speed", 2048, &is_rolling, 5, &speed_reader_task_handle); 
+
 }
