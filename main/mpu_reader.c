@@ -167,11 +167,15 @@ void euler_reader(void* pvParameters) {
     long quat[4], euler[3];
     unsigned long sensor_timestamp;
 
+    int i = 0;
     while (1) {
-
         dmp_read_fifo(gyro, accel_short, quat, &sensor_timestamp, &sensors, &more);
         get_euler_from_quat(quat, euler);
         (*callback)(euler);
+        if (i++ == 100) {
+            i = 0;
+            printf("%ld\n", euler[1] / 65536);
+        }
         delay_ms(5);
     }
 }

@@ -21,21 +21,9 @@ void motor_controller_init() {
     bldc_interface_set_rx_value_func(bldc_val_received);
 }
 
-void speed_reader(void* pvParameters) {
-    while (1) {
-        for (int i = -10000; i < 10000; i++) {
-            delay_ms(2);
-            bldc_interface_set_rpm(i);
-        }
-        for (int i = 10000; i > -10000; i--) {
-            delay_ms(2);
-            bldc_interface_set_rpm(i);
-        }
-    }
-}
-
 void set_brake(uint32_t strength) {
 }
 
-void set_motor(float value) {
+void set_motor(int value) {
+    bldc_interface_set_rpm(value);
 }

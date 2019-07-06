@@ -20,9 +20,6 @@ static void send_packet(unsigned char *data, unsigned int len) {
 		return;
 	}
 
-	static uint8_t buffer[PACKET_MAX_PL_LEN + 5];
-	memcpy(buffer, data, len);
-	
 	uart_write_bytes(UART_NUM_2, (const char *) data, len);
 }
 
@@ -107,7 +104,7 @@ void comm_uart_init(void) {
 	bldc_interface_uart_init(send_packet);
     
 	TaskHandle_t timer_task_handle = NULL;
-    xTaskCreate(timer_task, "Timer", 2048, NULL, 5, &timer_task_handle); 
+    //xTaskCreate(timer_task, "Timer", 2048, NULL, 5, &timer_task_handle); 
 
 	xTaskCreate(uart_event_task, "uart_event_task", 2048, NULL, 12, NULL);
 }

@@ -42,14 +42,13 @@ void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
 
 int euler_count = 0;
 void on_new_euler(long* euler) {
-    float new_motor_out = pid_compute(euler[1] / 65536);
-    set_motor(new_motor_out);
+    int new_motor_out = pid_compute(euler[1] / 65536);
+    set_motor(new_motor_out * 40);
 
-    if (euler_count++ > 5) {
+    if (euler_count++ % 5 == 0) {
         send_euler(euler);
         send_info(new_motor_out < 0 ? -new_motor_out : new_motor_out, new_motor_out < 0, 
                 50, 10);
-        euler_count = 0;
     }
 }
 
@@ -65,10 +64,6 @@ void app_main() {
 
     motor_controller_init();
     
-    //TaskHandle_t pid_task_handle = NULL;
-    //xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
-    
-    TaskHandle_t speed_reader_task_handle = NULL;
-    xTaskCreate(speed_reader, "Speed", 2048, &is_rolling, 5, &speed_reader_task_handle); 
-
+    TaskHandle_t pid_task_handle = NULL;
+    xTaskCreate(euler_reader, "PID", 2048, on_new_euler, 6, &pid_task_handle); 
 }
