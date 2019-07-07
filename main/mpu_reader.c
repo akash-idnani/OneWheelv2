@@ -157,6 +157,8 @@ static void init_mpu() {
     mpu_set_dmp_state(1); 
 }
 
+static int read_count = 0;
+static int reading = 0;
 void euler_reader(void* pvParameters) {
     void (*callback) (long*) = pvParameters;
 
@@ -169,6 +171,14 @@ void euler_reader(void* pvParameters) {
 
     int i = 0;
     while (1) {
+        read_count++;
+        if (read_count > 1500) reading = true;
+
+        if (!reading) {
+            dmp_read_fifo(gyro, accel_short, quat, &sensor_timestamp, &sensors, &more);
+            delay_ms(1);
+            continue;
+        }
         dmp_read_fifo(gyro, accel_short, quat, &sensor_timestamp, &sensors, &more);
         get_euler_from_quat(quat, euler);
         (*callback)(euler);

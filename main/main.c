@@ -13,11 +13,13 @@
 #include "motor_controller.h"
 #include "bluetooth.h"
 #include "nvs_handler.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 #include "pid.h"
 
 #define PIN_REVERSE 18
 
-static int is_rolling = 0;
+static int is_live = 0;
 
 void delay_ms(unsigned long num_ms) {
     vTaskDelay(num_ms / portTICK_RATE_MS);
@@ -42,8 +44,13 @@ void get_pid_gains(uint16_t* prop, uint16_t* integral, uint16_t* deriv) {
 
 int euler_count = 0;
 void on_new_euler(long* euler) {
-    int new_motor_out = pid_compute(euler[1] / 65536);
-    set_motor(new_motor_out * 40);
+    if (!is_live && euler[1] / 65536 > -3 && euler[1] / 65536 < 3) is_live = 1;
+
+    int new_motor_out = 0;
+    if (is_live) {
+        new_motor_out = -pid_compute(euler[1] / 65536);
+        set_motor(new_motor_out * 0.01f);
+    }
 
     if (euler_count++ % 5 == 0) {
         send_euler(euler);
@@ -53,14 +60,26 @@ void on_new_euler(long* euler) {
 }
 
 void app_main() {
-    init_ble();
-    //reset_nvs();
+    esp_err_t ret;
+
+    /* Initialize NVS. */
+    ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( ret );
 
     uint16_t kP, kI, kD;
     read_nvs(&kP, &kI, &kD);
 
+    init_ble();
+    //reset_nvs();
+
+
+
     pid_set_tunings(kP, kI, kD);
-    pid_set_output_limits(-255, 255);
+    pid_set_output_limits(-1000, 1000);
 
     motor_controller_init();
     

@@ -24,6 +24,6 @@ void motor_controller_init() {
 void set_brake(uint32_t strength) {
 }
 
-void set_motor(int value) {
+void set_motor(float value) {
     bldc_interface_set_rpm(value);
 }
