@@ -49,7 +49,7 @@ void on_new_euler(long* euler) {
     int new_motor_out = 0;
     if (is_live) {
         new_motor_out = -pid_compute(euler[1] / 65536);
-        set_motor(new_motor_out * 0.01f);
+        set_motor(new_motor_out);
     }
 
     if (euler_count++ % 5 == 0) {
@@ -79,7 +79,7 @@ void app_main() {
 
 
     pid_set_tunings(kP, kI, kD);
-    pid_set_output_limits(-1000, 1000);
+    pid_set_output_limits(-100, 100);
 
     motor_controller_init();
     

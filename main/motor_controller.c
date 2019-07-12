@@ -13,7 +13,7 @@
 #include "motiondriver_defs.h"
 
 void bldc_val_received(mc_values *val) {
-    
+    printf("%f %f\n", val->current_motor, val->duty_now);
 }
 
 void motor_controller_init() {
@@ -24,6 +24,11 @@ void motor_controller_init() {
 void set_brake(uint32_t strength) {
 }
 
+int i = 0;
 void set_motor(float value) {
-    bldc_interface_set_rpm(value);
+    bldc_interface_set_duty_cycle(value);
+    if (i++ == 500) {
+        bldc_interface_get_values();
+        i = 0;
+    }
 }
